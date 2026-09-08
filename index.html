@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣銀行牌告利率查詢</title>
+    <style>
+        :root {
+            --primary: #1a3a5c;
+            --primary-light: #2a5a8c;
+            --primary-dark: #0d1f33;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success: #059669;
+            --success-light: #d1fae5;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --bg-page: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-table-header: #f8fafc;
+            --border-color: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.03);
+            --radius: 8px;
+            --radius-lg: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-page);
+            min-height: 100vh;
+            padding: 0;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Top bar */
+        .top-bar {
+            background: var(--primary-dark);
+            color: white;
+            padding: 12px 0;
+            border-bottom: 3px solid var(--accent);
+        }
+        .top-bar .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-bar .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .top-bar .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+        }
+        .top-bar .logo-text h1 {
+            font-size: 1.3em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .top-bar .logo-text p {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+        .top-bar .update-time {
+            font-size: 0.85em;
+            opacity: 0.8;
+            text-align: right;
+        }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+        /* Main content area */
+        .main-content {
+            padding: 24px 0 48px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Section headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .section-header .icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9em;
+        }
+        .section-header h2 {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .section-header .subtitle {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        /* Fetch status */
+        .fetch-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: var(--bg-table-header);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+        .fetch-status .status-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            flex-shrink: 0;
+        }
+        .fetch-status .status-icon.loading { background: #e0f2fe; color: #0284c7; }
+        .fetch-status .status-icon.success { background: var(--success-light); color: var(--success); }
+        .fetch-status .status-icon.warning { background: #fef3c7; color: var(--warning); }
+        .fetch-status .status-icon.error { background: #fee2e2; color: var(--danger); }
+        .fetch-status .status-text { font-size: 0.9em; color: var(--text-secondary); }
+        .fetch-status .status-detail { font-size: 0.8em; color: var(--text-muted); margin-left: auto; }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-size: 0.88em;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: white;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: var(--shadow-md);
+        }
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+        }
+        .btn-success:hover {
+            background: #047857;
+            box-shadow: var(--shadow-md);
+        }
+        .btn-warning {
+            background: var(--warning);
+            border-color: var(--warning);
+        }
+        .btn-warning:hover {
+            background: #b45309;
+            box-shadow: var(--shadow-md);
+        }
+        .btn-outline {
+            background: white;
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+        .btn-outline:hover {
+            background: var(--bg-table-header);
+            border-color: var(--text-muted);
+        }
+
+        /* Filter section */
+        .filter-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .filter-section label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        /* Term tags */
+        .term-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .term-tag {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.82em;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .term-tag:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: #eff6ff;
+        }
+        .term-tag.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Stats cards */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+        .stat-card {
+            padding: 16px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background: var(--bg-table-header);
+            text-align: center;
+        }
+        .stat-card .label {
+            font-size: 0.78em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-card .value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Table styles */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            margin-top: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+        thead {
+            background: var(--bg-table-header);
+        }
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.88em;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
+        }
+        td {
+            padding: 13px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .bank-name {
+            font-weight: 500;
+            max-width: 220px;
+        }
+        .rate-value {
+            font-weight: 700;
+            font-family: "SF Mono", "Consolas", "Microsoft JhengHei", monospace;
+            font-size: 1.05em;
+        }
+        .rate-up { color: var(--success); }
+        .rate-down { color: var(--danger); }
+        .rate-hold { color: var(--text-secondary); }
+
+        /* Amount range inputs */
+        .amount-range {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .amount-range input {
+            width: 90px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-primary);
+            font-size: 0.88em;
+            font-family: inherit;
+        }
+        .amount-range .to-label {
+            color: var(--text-muted);
+            font-size: 0.85em;
+        }
+
+        /* Source badges */
+        .data-source-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.72em;
+            font-weight: 600;
+            margin-left: 6px;
+            letter-spacing: 0.3px;
+        }
+        .source-rate {
+            background: var(--success-light);
+            color: var(--success);
+            border: 1px solid #a7f3d0;
+        }
+        .source-bkrldc {
+            background: #ede9fe;
+            color: #7c3aed;
+            border: 1px solid #c4b5fd;
+        }
+        .source-bkrldc-api {
+            background: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+        }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .status-ready {
+            background: var(--success-light);
+            color: var(--success);
+        }
+        .status-pending {
+            background: var(--bg-table-header);
+            color: var(--text-muted);
+        }
+
+        /* Month table sections */
+        .month-table-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+        .month-table-header {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .month-table-count {
+            font-size: 0.82em;
+            color: var(--text-muted);
+            margin-left: 8px;
+            font-weight: 400;
+        }
+
+        /* Info bar */
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 0.85em;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: 12px;
+        }
+
+        /* Source link */
+        .source-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.82em;
+            color: var(--text-muted);
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+        .source-link a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .source-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Loading spinner */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 16px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error */
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: var(--radius);
+            padding: 16px;
+            margin: 16px 0;
+            color: var(--danger);
+            font-size: 0.9em;
+        }
+
+        /* Number input */
+        #show-count {
+            width: 60px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-primary);
+            font-size: 0.88em;
+            font-family: inherit;
+        }
+
+        /* Select input */
+        select.form-select {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-primary);
+            font-size: 0.88em;
+            font-family: inherit;
+            min-width: 160px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 0 12px; }
+            .card { padding: 16px; }
+            .top-bar .logo-text h1 { font-size: 1.1em; }
+            .top-bar .update-time { display: none; }
+            th, td { padding: 10px 12px; font-size: 0.9em; }
+            .stat-card .value { font-size: 1.2em; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .filter-section { gap: 8px; }
+            select.form-select { min-width: 120px; }
+            .amount-range input { width: 70px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="logo">
+                <div class="logo-icon">🏛️</div>
+                <div class="logo-text">
+                    <h1>台灣銀行牌告利率查詢</h1>
+                    <p>Central Bank of the Republic, China — Deposit Rate Comparison</p>
+                </div>
+            </div>
+            <div class="update-time" id="update-time">
+                <div>資料更新時間</div>
+                <div style="font-size:1.1em;font-weight:600;" id="last-update">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Data Source Card -->
+            <div class="card">
+                <div class="section-header">
+                    <div class="icon">📡</div>
+                    <h2>資料來源</h2>
+                    <span class="subtitle">MongoDB (央行 OpenData 同步)</span>
+                </div>
+
+                <!-- Auto Fetch Status -->
+                <div class="fetch-status" id="api-status">
+                    <div class="status-icon loading" id="api-status-icon">⏳</div>
+                    <span class="status-text" id="api-status-text">正在連線 MongoDB API...</span>
+                    <span class="status-detail" id="api-status-detail"></span>
+                </div>
+
+                <!-- Refresh Button -->
+                <div style="text-align:center; margin-top:12px;">
+                    <button class="btn btn-primary" onclick="loadAllData()">
+                        🔄 重新載入資料
+                    </button>
+                    <span id="last-sync-time" style="margin-left:12px;font-size:0.85em;color:var(--text-muted);"></span>
+                </div>
+
+                <!-- Source links -->
+                <div class="source-link" style="margin-top:16px;">
+                    資料來源：<a href="https://www.cbc.gov.tw/public/data/OpenData/Rate.csv" target="_blank">央行 Rate.csv</a> ｜
+                    <a href="https://www.cbc.gov.tw/public/Data/OpenData/bkrldc.csv" target="_blank">央行 bkrldc.csv</a> ｜
+                    <a href="https://www.cbc.gov.tw/tw/np-369-1.html" target="_blank">央行利率專區</a>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card" id="results-card" style="display:none;">
+                <div class="section-header">
+                    <div class="icon">📊</div>
+                    <h2>利率分析結果</h2>
+                    <span class="subtitle" id="results-subtitle">定期存款利率比較</span>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-section">
+                    <label>利率項目：</label>
+                    <select id="item-type-filter" class="form-select" onchange="applyFilters()">
+                        <option value="">全部</option>
+                        <option value="定期存款">定期存款</option>
+                        <option value="定期儲蓄存款">定期儲蓄存款</option>
+                        <option value="活期存款">活期存款</option>
+                        <option value="活期儲蓄存款">活期儲蓄存款</option>
+                        <option value="薪資轉帳活期儲蓄存款">薪資轉帳活期儲蓄存款</option>
+                        <option value="證券戶活期儲蓄存款">證券戶活期儲蓄存款</option>
+                    </select>
+                </div>
+
+                <div class="filter-section">
+                    <label>存款期限：</label>
+                    <div class="term-tags" id="term-tags">
+                        <span class="term-tag active" data-term="0">全部</span>
+                        <span class="term-tag" data-term="1">1個月</span>
+                        <span class="term-tag" data-term="2">2個月</span>
+                        <span class="term-tag" data-term="3">3個月</span>
+                        <span class="term-tag" data-term="4">4個月</span>
+                        <span class="term-tag" data-term="5">5個月</span>
+                        <span class="term-tag" data-term="6">6個月</span>
+                        <span class="term-tag" data-term="7">7個月</span>
+                        <span class="term-tag" data-term="8">8個月</span>
+                        <span class="term-tag" data-term="9">9個月</span>
+                        <span class="term-tag" data-term="10">10個月</span>
+                        <span class="term-tag" data-term="11">11個月</span>
+                        <span class="term-tag" data-term="12">12個月</span>
+                    </div>
+                </div>
+
+                <!-- Amount Filter + Show Count -->
+                <div class="filter-section">
+                    <label>金額範圍：</label>
+                    <div class="amount-range">
+                        <input type="number" id="amount-min" placeholder="最小(萬)" min="0" step="1" onchange="applyFilters()">
+                        <span class="to-label">~</span>
+                        <input type="number" id="amount-max" placeholder="最大(萬)" min="0" step="1" onchange="applyFilters()">
+                    </div>
+                    <label style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+                        顯示筆數：
+                        <input type="number" id="show-count" value="30" min="1" max="500" onchange="applyFilters()">
+                        筆
+                    </label>
+                    <button class="btn btn-outline" onclick="clearPreferences()" style="font-size:0.85em;padding:6px 14px;" title="清除已儲存的偏好設定">清除偏好</button>
+                    <button class="btn btn-warning" onclick="resetAll()" style="font-size:0.85em;padding:6px 14px;">清除重載</button>
+                </div>
+
+                <!-- Bank Filter + Effective Date Filter -->
+                <div class="filter-section">
+                    <label>銀行篩選：</label>
+                    <button class="btn btn-primary" onclick="toggleBankFilter()" style="font-size:0.85em;padding:6px 14px;">選擇銀行</button>
+                    <div id="bank-filter-panel" style="display:none;">
+                        <div style="display:flex;gap:8px;margin-bottom:10px;">
+                            <button class="btn btn-primary" onclick="selectAllBanks()" style="font-size:0.8em;padding:4px 10px;">全選</button>
+                            <button class="btn btn-primary" onclick="deselectAllBanks()" style="font-size:0.8em;padding:4px 10px;">取消全選</button>
+                            <button class="btn btn-primary" onclick="applyBankFilter()" style="font-size:0.8em;padding:4px 10px;">套用</button>
+                        </div>
+                        <div id="bank-checkboxes"></div>
+                    </div>
+                    <div id="selected-banks-display" style="font-size:0.85em;color:var(--text-muted);margin-left:10px;"></div>
+                    <label style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+                        生效日期：
+                        <select id="effective-filter" class="form-select" onchange="applyFilters()" style="min-width:140px;">
+                            <option value="all">包含未來生效</option>
+                            <option value="past">只看已生效</option>
+                        </select>
+                    </label>
+                </div>
+
+                <!-- Stats -->
+                <div id="stats-container" class="stats" style="display:none;"></div>
+
+                <!-- Info Bar -->
+                <div id="info-bar" class="info-bar" style="display:none;">
+                    <span id="data-date"></span>
+                    <span id="data-count"></span>
+                </div>
+
+                <!-- Content -->
+                <div id="content"></div>
+
+                <!-- Source -->
+                <div class="source-link">
+                    資料來源：MongoDB (每日 08:10 自動同步央行 OpenData) ｜
+                    <a href="https://www.cbc.gov.tw/tw/np-369-1.html" target="_blank">央行利率專區</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ==================== Configuration ====================
+    const API_BASE = 'http://localhost:8765/api';
+
+    // ==================== Global State ====================
+    let allData = [];
+    let statsData = null;
+
+    // ==================== Utility Functions ====================
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
+                  .replace(/"/g, '"').replace(/'/g, '&#039;');
+    }
+
+    function formatTimestamp(ts) {
+        if (!ts || ts < 100000000) return '--';
+        const tsStr = ts.toString();
+        // Handle 7-digit ROC format: YYYMMDD (e.g., 1150907 = 2026-09-07)
+        if (tsStr.length === 7) {
+            const year = Math.floor(ts / 10000) + 1911;
+            const month = Math.floor((ts % 10000) / 100);
+            const day = ts % 100;
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        // Handle 8-digit AD format: YYYYMMDD
+        if (tsStr.length === 8) {
+            const year = Math.floor(ts / 10000);
+            const month = Math.floor((ts % 10000) / 100);
+            const day = ts % 100;
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        return '--';
+    }
+
+    function formatDateAD(dateStr) {
+        // Convert ROC date (YYYYMMDD) or AD date (YYYY-MM-DD) to display format
+        if (!dateStr) return 'N/A';
+        if (dateStr.includes('-')) return dateStr; // Already AD format
+
+        // Handle 7-digit ROC format: YYYMMDD (e.g., 1150908 = 2026-09-08)
+        if (dateStr.length === 7) {
+            const year = parseInt(dateStr.substring(0, 3)) + 1911;
+            const month = dateStr.substring(3, 5);
+            const day = dateStr.substring(5, 7);
+            return `${year}-${month}-${day}`;
+        }
+
+        // Handle 6-digit ROC format: YYMMDD (legacy)
+        if (dateStr.length === 6) {
+            const year = parseInt(dateStr.substring(0, 2)) + 1911;
+            const month = dateStr.substring(2, 4);
+            const day = dateStr.substring(4, 6);
+            return `${year}-${month}-${day}`;
+        }
+
+        return dateStr;
+    }
+
+    function updateApiStatus(mainText, detailText = '', iconState = 'loading') {
+        const statusEl = document.getElementById('api-status-text');
+        const detailsEl = document.getElementById('api-status-detail');
+        const iconEl = document.getElementById('api-status-icon');
+        if (statusEl) statusEl.textContent = mainText;
+        if (detailsEl) detailsEl.textContent = detailText;
+        if (iconEl) {
+            iconEl.className = `status-icon ${iconState}`;
+            if (iconState === 'loading') iconEl.textContent = '⏳';
+            else if (iconState === 'success') iconEl.textContent = '✅';
+            else if (iconState === 'warning') iconEl.textContent = '⚠️';
+            else if (iconState === 'error') iconEl.textContent = '❌';
+        }
+    }
+
+    function getShowCount() {
+        const input = document.getElementById('show-count');
+        let val = parseInt(input.value);
+        if (isNaN(val) || val < 1) val = 30;
+        if (val > 500) val = 500;
+        input.value = val;
+        return val;
+    }
+
+    // ==================== API Calls ====================
+    async function apiGet(path) {
+        const response = await fetch(`${API_BASE}${path}`);
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    }
+
+    async function loadAllData() {
+        const content = document.getElementById('content');
+        content.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在從 MongoDB 載入資料...</p></div>';
+
+        try {
+            updateApiStatus('正在連線 MongoDB API...', '', 'loading');
+
+            // Load stats first
+            statsData = await apiGet('/rates/stats');
+            console.log('Stats loaded:', statsData);
+
+            // Load rates data
+            const ratesResult = await apiGet('/rates?limit=2000');
+            allData = ratesResult.data;
+            console.log('Rates loaded:', allData.length, 'records');
+
+            // Load latest update info
+            const latestUpdate = await apiGet('/latest-update');
+            updateLastUpdateTime(latestUpdate);
+
+            // Show results
+            document.getElementById('results-card').style.display = 'block';
+            updateApiStatus('資料載入完成', `共 ${allData.length} 筆，${statsData.bank_count} 家銀行`, 'success');
+
+            // Populate bank filter dropdown
+            populateBankFilter();
+
+            // Render
+            const activeTag = document.querySelector('.term-tag.active');
+            const selectedTerm = activeTag ? parseInt(activeTag.dataset.term) : 0;
+            renderData(allData, selectedTerm);
+
+            // Scroll to results
+            document.getElementById('results-card').scrollIntoView({ behavior: 'smooth' });
+
+        } catch (error) {
+            console.error('Load data error:', error);
+            updateApiStatus('載入失敗', error.message, 'error');
+            content.innerHTML = `<div class="error"><p><strong>載入失敗：</strong>${escapeHtml(error.message)}</p><p>請確認 API Server 是否已啟動 (http://localhost:8765)</p></div>`;
+        }
+    }
+
+    function updateLastUpdateTime(latestUpdate) {
+        let latestDate = 'N/A';
+        if (latestUpdate.rate_data?.data_date) {
+            latestDate = formatTimestamp(latestUpdate.rate_data.data_date);
+        } else if (latestUpdate.rate_data?.effective_date) {
+            latestDate = formatDateAD(latestUpdate.rate_data.effective_date);
+        }
+        document.getElementById('last-update').textContent = latestDate;
+        document.getElementById('last-sync-time').textContent = `最後同步：${new Date().toLocaleString('zh-TW')}`;
+    }
+
+    // ==================== Display Functions ====================
+    function extractMonth(term) {
+        // 支援全形數字轉半形
+        const toHalf = (s) => s.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+        const halfTerm = toHalf(term);
+
+        const yearMatch = halfTerm.match(/(\d+)\s*年/);
+        const monthMatch = halfTerm.match(/(\d+)\s*(?:個)?月/);
+        const dayMatch = halfTerm.match(/(\d+)\s*日/);
+
+        let months = 0;
+        if (yearMatch) months += parseInt(yearMatch[1]) * 12;
+        if (monthMatch) months += parseInt(monthMatch[1]);
+        if (dayMatch) months += Math.ceil(parseInt(dayMatch[1]) / 30);
+
+        return months;
+    }
+
+    function renderData(data, selectedTerm) {
+        const content = document.getElementById('content');
+        const statsContainer = document.getElementById('stats-container');
+        const infoBar = document.getElementById('info-bar');
+
+        if (data.length === 0) {
+            content.innerHTML = '<div class="loading"><p>暫無資料</p></div>';
+            statsContainer.style.display = 'none';
+            infoBar.style.display = 'none';
+            return;
+        }
+
+        let filtered = data;
+        if (selectedTerm > 0) {
+            filtered = data.filter(d => extractMonth(d.term_chinese) === selectedTerm);
+        }
+
+        // Apply filters
+        filtered = filterByAmount(filtered);
+        filtered = filterByBank(filtered);
+        filtered = filterByEffectiveDate(filtered);
+        filtered = filterByItemType(filtered);
+
+        filtered.sort((a, b) => (b.fixed_rate_pct || 0) - (a.fixed_rate_pct || 0));
+
+        const banks = new Set(filtered.map(d => d.bank_name));
+        const rates = filtered.map(d => d.fixed_rate_pct).filter(r => r != null);
+        const avgRate = rates.length > 0 ? (rates.reduce((sum, r) => sum + r, 0) / rates.length).toFixed(3) : 0;
+        const maxRate = rates.length > 0 ? Math.max(...rates).toFixed(3) : 0;
+        const minRate = rates.length > 0 ? Math.min(...rates).toFixed(3) : 0;
+
+        statsContainer.innerHTML = `
+            <div class="stat-card">
+                <div class="label">總筆數</div>
+                <div class="value">${data.length.toLocaleString()}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">銀行數</div>
+                <div class="value">${banks.size}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">最高利率</div>
+                <div class="value" style="color:var(--success);">${maxRate}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">平均利率</div>
+                <div class="value">${avgRate}%</div>
+            </div>
+        `;
+        statsContainer.style.display = 'grid';
+
+        const dates = [...new Set(data.map(d => formatDateAD(d.effective_date)))].filter(d => d !== 'N/A');
+        // Sort numerically (ROC dates as strings would put 104xxx before 115xxx)
+        dates.sort((a, b) => parseInt(b.replace(/-/g, '')) - parseInt(a.replace(/-/g, '')));
+        document.getElementById('data-date').textContent = `最新生效日期：${dates[0] || 'N/A'}`;
+        document.getElementById('data-count').textContent = `顯示前 ${filtered.length} 筆（按固定利率由高至低）`;
+        infoBar.style.display = 'flex';
+
+        if (selectedTerm === 0) {
+            render12Tables(filtered);
+        } else {
+            renderSingleTable(filtered, selectedTerm);
+        }
+    }
+
+    function render12Tables(data) {
+        const content = document.getElementById('content');
+        const showCount = getShowCount();
+        let html = '';
+
+        const byMonth = {};
+        for (let m = 1; m <= 12; m++) {
+            byMonth[m] = data.filter(d => extractMonth(d.term_chinese) === m);
+        }
+
+        for (let m = 1; m <= 12; m++) {
+            const monthData = byMonth[m];
+            if (monthData.length === 0) continue;
+
+            monthData.sort((a, b) => (b.fixed_rate_pct || 0) - (a.fixed_rate_pct || 0));
+            const displayData = monthData.slice(0, showCount);
+
+            html += `<div class="month-table-section">`;
+            html += `<div class="month-table-header">${m}個月 <span class="month-table-count">(${monthData.length} 筆資料，顯示前 ${displayData.length} 筆)</span></div>`;
+            html += `<div class="table-container">`;
+            html += renderTableHTML(displayData);
+            html += `</div>`;
+            if (monthData.length > showCount) {
+                html += `<p style="text-align:center;color:var(--text-muted);font-size:0.82em;margin-top:10px;">（還有 ${monthData.length - showCount} 筆，調整「顯示筆數」查看更多）</p>`;
+            }
+            html += `</div>`;
+        }
+
+        content.innerHTML = html || '<div class="loading"><p>暫無資料</p></div>';
+    }
+
+    function renderSingleTable(data, selectedTerm) {
+        const content = document.getElementById('content');
+        const showCount = getShowCount();
+        const topN = data.slice(0, showCount);
+        content.innerHTML = `<div class="table-container">${renderTableHTML(topN)}</div>`;
+    }
+
+    function renderTableHTML(data) {
+        // Check if all data_date are empty/--
+        const hasDataDate = data.some(record => record.data_date && record.data_date.toString().trim() !== '');
+
+        let html = '<table><thead><tr>';
+        html += '<th style="width:40px;">#</th>';
+        html += '<th>銀行名稱</th>';
+        html += '<th>利率項目</th>';
+        html += '<th>存款期限</th>';
+        html += '<th>金額額度</th>';
+        html += '<th style="text-align:right;">固定利率(%)</th>';
+        html += '<th style="text-align:right;">機動利率(%)</th>';
+        html += '<th>生效日期</th>';
+        if (hasDataDate) {
+            html += '<th>資料日期</th>';
+        }
+        html += '</tr></thead><tbody>';
+
+        data.forEach((record, index) => {
+            const fixedRate = record.fixed_rate_pct != null ? record.fixed_rate_pct.toFixed(3) : '—';
+            const floatingRate = record.floating_rate_pct != null ? record.floating_rate_pct.toFixed(3) : '—';
+            const amountDisplay = record.quota_chinese || '一般';
+
+            html += `<tr>
+                <td style="color:var(--text-muted);">${index + 1}</td>
+                <td class="bank-name">${escapeHtml(record.bank_name)}</td>
+                <td>${escapeHtml(record.rate_item_name)}</td>
+                <td>${escapeHtml(record.term_chinese)}</td>
+                <td>${escapeHtml(amountDisplay)}</td>
+                <td class="rate-value" style="text-align:right;color:var(--primary);">${fixedRate}</td>
+                <td class="rate-value" style="text-align:right;color:var(--text-secondary);">${floatingRate}</td>
+                <td>${escapeHtml(formatDateAD(record.effective_date))}</td>`;
+            if (hasDataDate) {
+                html += `<td>${escapeHtml(formatTimestamp(record.data_date))}</td>`;
+            }
+            html += `</tr>`;
+        });
+
+        html += '</tbody></table>';
+        return html;
+    }
+
+    // ==================== Filters ====================
+    function applyFilters() {
+        const activeTag = document.querySelector('.term-tag.active');
+        const selectedTerm = activeTag ? parseInt(activeTag.dataset.term) : 0;
+        renderData(allData, selectedTerm);
+        savePreferences();
+    }
+
+    function filterByAmount(data) {
+        const minVal = parseInt(document.getElementById('amount-min').value);
+        const maxVal = parseInt(document.getElementById('amount-max').value);
+
+        if (isNaN(minVal) && isNaN(maxVal)) return data;
+
+        return data.filter(d => {
+            const amountStr = d.quota_chinese || '';
+            // Parse amount like "1億" -> 10000, "5佰萬" -> 5000, "2億" -> 20000
+            let amountWan = 0;
+            if (amountStr.includes('億')) {
+                const num = parseFloat(amountStr.replace('億', ''));
+                amountWan = num * 10000;
+            } else if (amountStr.includes('佰萬') || amountStr.includes('百萬')) {
+                const num = parseFloat(amountStr.replace('佰萬', '').replace('百萬', ''));
+                amountWan = num * 100;
+            } else if (amountStr.includes('仟萬') || amountStr.includes('千萬')) {
+                const num = parseFloat(amountStr.replace('仟萬', '').replace('千萬', ''));
+                amountWan = num * 1000;
+            } else if (amountStr.includes('萬')) {
+                const num = parseFloat(amountStr.replace('萬', ''));
+                amountWan = num;
+            } else {
+                // Try to parse as number
+                amountWan = parseFloat(amountStr) || 0;
+            }
+
+            if (!isNaN(minVal) && amountWan < minVal) return false;
+            if (!isNaN(maxVal) && amountWan > maxVal) return false;
+            return true;
+        });
+    }
+
+    function filterByBank(data) {
+        const bankSelect = document.getElementById('bank-filter');
+        const selectedBanks = Array.from(bankSelect.selectedOptions).map(opt => opt.value).filter(v => v !== '');
+        if (selectedBanks.length === 0) return data;
+        return data.filter(d => selectedBanks.includes(d.bank_name));
+    }
+
+    function filterByEffectiveDate(data) {
+        const effectiveFilter = document.getElementById('effective-filter').value;
+        if (effectiveFilter === 'all') return data;
+        
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+        
+        return data.filter(d => {
+            const effDate = formatDateAD(d.effective_date).replace(/-/g, '');
+            const effNum = parseInt(effDate);
+            const todayNum = parseInt(todayStr);
+            return effectiveFilter === 'past' ? effNum <= todayNum : effNum > todayNum;
+        });
+    }
+
+    function populateBankFilter() {
+        const banks = [...new Set(allData.map(d => d.bank_name))].sort();
+        const container = document.getElementById('bank-checkboxes');
+        container.innerHTML = '';
+
+        // Restore saved selections or default to all
+        const prefs = loadPreferences();
+        const selectedBanks = new Set(prefs?.selectedBanks || banks);
+
+        banks.forEach(bank => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:0.85em;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;';
+            label.onmouseenter = () => label.style.background = 'rgba(255,255,255,0.05)';
+            label.onmouseleave = () => label.style.background = 'transparent';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = bank;
+            checkbox.checked = selectedBanks.has(bank);
+            checkbox.style.cursor = 'pointer';
+
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    selectedBanks.add(bank);
+                } else {
+                    selectedBanks.delete(bank);
+                }
+            });
+
+            const span = document.createElement('span');
+            span.textContent = bank;
+
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            container.appendChild(label);
+        });
+
+        updateSelectedBanksDisplay();
+    }
+
+    function selectAllBanks() {
+        document.querySelectorAll('#bank-checkboxes input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+        });
+        updateSelectedBanksDisplay();
+    }
+
+    function deselectAllBanks() {
+        document.querySelectorAll('#bank-checkboxes input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+        updateSelectedBanksDisplay();
+    }
+
+    function applyBankFilter() {
+        document.getElementById('bank-filter-panel').style.display = 'none';
+        updateSelectedBanksDisplay();
+        savePreferences();
+        applyFilters();
+    }
+
+    function updateSelectedBanksDisplay() {
+        const display = document.getElementById('selected-banks-display');
+        const checkboxes = document.querySelectorAll('#bank-checkboxes input[type="checkbox"]');
+        const allBanks = Array.from(checkboxes).map(cb => cb.value);
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        
+        if (selectedCount === 0) {
+            display.textContent = '未選擇銀行';
+        } else if (selectedCount === allBanks.length) {
+            display.textContent = '全部銀行';
+        } else {
+            display.textContent = `已選擇 ${selectedCount} 家銀行`;
+        }
+    }
+
+    function toggleBankFilter() {
+        const panel = document.getElementById('bank-filter-panel');
+        if (panel.style.display === 'none') {
+            populateBankFilter();
+            panel.style.display = 'block';
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+
+    function filterByBank(data) {
+        const checkboxes = document.querySelectorAll('#bank-checkboxes input[type="checkbox"]');
+        const selectedBanks = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        if (selectedBanks.length === 0) return data;
+        return data.filter(d => selectedBanks.includes(d.bank_name));
+    }
+
+    function filterByItemType(data) {
+        const itemType = document.getElementById('item-type-filter').value;
+        if (!itemType) return data;
+        return data.filter(d => d.rate_item_name === itemType);
+    }
+
+    // ==================== Term Tag Click Handler ====================
+    document.getElementById('term-tags').addEventListener('click', function(e) {
+        const tag = e.target.closest('.term-tag');
+        if (!tag) return;
+
+        document.querySelectorAll('.term-tag').forEach(t => t.classList.remove('active'));
+        tag.classList.add('active');
+        savePreferences();
+        applyFilters();
+    });
+
+    // ==================== Show Count Input Handler ====================
+    document.getElementById('show-count').addEventListener('input', function() {
+        applyFilters();
+        savePreferences();
+    });
+
+    // ==================== Preferences Persistence ====================
+    const STORAGE_KEY = 'bank-rates-prefs';
+
+    function savePreferences() {
+        try {
+            const checkboxes = document.querySelectorAll('#bank-checkboxes input[type="checkbox"]');
+            const selectedBanks = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
+            const prefs = {
+                selectedBanks: selectedBanks,
+                showCount: document.getElementById('show-count').value,
+                lastTerm: document.querySelector('.term-tag.active')?.dataset.term || '0',
+                itemType: document.getElementById('item-type-filter').value,
+                amountMin: document.getElementById('amount-min').value,
+                amountMax: document.getElementById('amount-max').value,
+                effectiveFilter: document.getElementById('effective-filter').value
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+        } catch (e) {
+            console.warn('無法儲存偏好設定:', e);
+        }
+    }
+
+    function loadPreferences() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (e) {
+            console.warn('無法讀取偏好設定:', e);
+            return null;
+        }
+    }
+
+    function applySavedPreferences() {
+        const prefs = loadPreferences();
+        if (!prefs) return;
+
+        // Restore term tag
+        if (prefs.lastTerm) {
+            const tag = document.querySelector(`.term-tag[data-term="${prefs.lastTerm}"]`);
+            if (tag) {
+                document.querySelectorAll('.term-tag').forEach(t => t.classList.remove('active'));
+                tag.classList.add('active');
+            }
+        }
+
+        // Restore show count
+        if (prefs.showCount) {
+            document.getElementById('show-count').value = prefs.showCount;
+        }
+
+        // Restore item type filter
+        if (prefs.itemType) {
+            document.getElementById('item-type-filter').value = prefs.itemType;
+        }
+
+        // Restore amount filter
+        if (prefs.amountMin) {
+            document.getElementById('amount-min').value = prefs.amountMin;
+        }
+        if (prefs.amountMax) {
+            document.getElementById('amount-max').value = prefs.amountMax;
+        }
+
+        // Restore effective filter
+        if (prefs.effectiveFilter) {
+            document.getElementById('effective-filter').value = prefs.effectiveFilter;
+        }
+    }
+
+    function clearPreferences() {
+        localStorage.removeItem(STORAGE_KEY);
+        document.getElementById('show-count').value = '30';
+        document.getElementById('item-type-filter').value = '';
+        document.getElementById('amount-min').value = '';
+        document.getElementById('amount-max').value = '';
+        document.getElementById('effective-filter').value = 'all';
+        document.querySelectorAll('#bank-checkboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.term-tag').forEach(t => t.classList.remove('active'));
+        document.querySelector('.term-tag[data-term="0"]')?.classList.add('active');
+        applyFilters();
+    }
+
+    // ==================== Reset ====================
+    function resetAll() {
+        allData = [];
+        statsData = null;
+        localStorage.removeItem(STORAGE_KEY);
+
+        document.getElementById('results-card').style.display = 'none';
+        document.getElementById('show-count').value = '30';
+        document.getElementById('item-type-filter').value = '';
+        document.getElementById('amount-min').value = '';
+        document.getElementById('amount-max').value = '';
+        document.getElementById('effective-filter').value = 'all';
+        document.querySelectorAll('#bank-checkboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.term-tag').forEach(t => t.classList.remove('active'));
+        document.querySelector('.term-tag[data-term="0"]')?.classList.add('active');
+        document.getElementById('last-update').textContent = '--';
+        document.getElementById('last-sync-time').textContent = '';
+        updateApiStatus('正在連線 MongoDB API...', '', 'loading');
+        document.getElementById('content').innerHTML = '';
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        loadAllData();
+    }
+
+    // ==================== Init ====================
+    applySavedPreferences();
+
+    // Auto-load on page load
+    loadAllData();
+    </script>
+</body>
+</html>
