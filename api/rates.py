@@ -184,7 +184,7 @@ async def get_changes(
     }
 
 
-@api.get("/api/latest-update")
+@app.get("/api/latest-update")
 async def get_latest_update():
     """取得最新資料更新時間"""
     latest_rate = rate_coll.find_one(
