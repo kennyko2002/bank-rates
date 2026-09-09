@@ -996,29 +996,67 @@
 
         return data.filter(d => {
             const amountStr = d.quota_chinese || '';
-            // Parse amount like "1億" -> 10000, "5佰萬" -> 5000, "2億" -> 20000
-            let amountWan = 0;
-            if (amountStr.includes('億')) {
-                const num = parseFloat(amountStr.replace('億', ''));
-                amountWan = num * 10000;
-            } else if (amountStr.includes('佰萬') || amountStr.includes('百萬')) {
-                const num = parseFloat(amountStr.replace('佰萬', '').replace('百萬', ''));
-                amountWan = num * 100;
-            } else if (amountStr.includes('仟萬') || amountStr.includes('千萬')) {
-                const num = parseFloat(amountStr.replace('仟萬', '').replace('千萬', ''));
-                amountWan = num * 1000;
-            } else if (amountStr.includes('萬')) {
-                const num = parseFloat(amountStr.replace('萬', ''));
-                amountWan = num;
-            } else {
-                // Try to parse as number
-                amountWan = parseFloat(amountStr) || 0;
-            }
+            // Parse amount like "1億" -> 10000, "5佰萬" -> 5000, "1仟1佰萬" -> 1100, "1億5仟萬" -> 15000
+            let amountWan = parseAmountToWan(amountStr);
 
             if (!isNaN(minVal) && amountWan < minVal) return false;
             if (!isNaN(maxVal) && amountWan > maxVal) return false;
             return true;
         });
+    }
+
+    function parseAmountToWan(amountStr) {
+        if (!amountStr || amountStr === '一般') return 0;
+        
+        let amountWan = 0;
+        const str = amountStr.trim();
+        
+        // Handle "一般" or non-numeric
+        if (!/[0-9０-９]/.test(str)) return 0;
+        
+        // Convert full-width to half-width
+        const halfStr = str.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+        
+        // Extract all units and their values
+        // Order matters: 億 > 仟萬/千萬 > 佰萬/百萬 > 萬
+        let remaining = halfStr;
+        let totalWan = 0;
+        
+        // 億 (1億 = 10000萬)
+        const yiMatch = remaining.match(/([0-9.]+)億/);
+        if (yiMatch) {
+            totalWan += parseFloat(yiMatch[1]) * 10000;
+            remaining = remaining.replace(yiMatch[0], '');
+        }
+        
+        // 仟萬/千萬 (1仟萬 = 1000萬)
+        const qianMatch = remaining.match(/([0-9.]+)[仟千]萬/);
+        if (qianMatch) {
+            totalWan += parseFloat(qianMatch[1]) * 1000;
+            remaining = remaining.replace(qianMatch[0], '');
+        }
+        
+        // 佰萬/百萬 (1佰萬 = 100萬)
+        const baiMatch = remaining.match(/([0-9.]+)[佰百]萬/);
+        if (baiMatch) {
+            totalWan += parseFloat(baiMatch[1]) * 100;
+            remaining = remaining.replace(baiMatch[0], '');
+        }
+        
+        // 萬 (單純的萬)
+        const wanMatch = remaining.match(/([0-9.]+)萬/);
+        if (wanMatch) {
+            totalWan += parseFloat(wanMatch[1]);
+            remaining = remaining.replace(wanMatch[0], '');
+        }
+        
+        // If still have remaining numbers without units, treat as wan
+        const numMatch = remaining.match(/([0-9.]+)/);
+        if (numMatch) {
+            totalWan += parseFloat(numMatch[1]);
+        }
+        
+        return totalWan;
     }
 
     function filterByBank(data) {
