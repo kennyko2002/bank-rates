@@ -184,7 +184,7 @@ async def get_changes(
     }
 
 
-@app.get("/api/latest-update")
+@api.get("/api/latest-update")
 async def get_latest_update():
     """取得最新資料更新時間"""
     latest_rate = rate_coll.find_one(
@@ -203,6 +203,125 @@ async def get_latest_update():
         "rate_data": latest_rate,
         "rate_changes": latest_change,
         "checked_at": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.get("/api/rates/merged")
+async def get_rates_merged(
+    bank: Optional[str] = Query(None, description="銀行名稱關鍵字"),
+    term_month: Optional[int] = Query(None, description="存款月數 1-12"),
+    amount: Optional[str] = Query(None, description="額度關鍵字"),
+    item_type: Optional[str] = Query(None, description="利率項目"),
+    limit: int = Query(500, ge=1, le=2000, description="回傳筆數上限"),
+    sort: str = Query("-fixed_rate_pct", description="排序欄位"),
+):
+    """
+    合併查詢：rate_data + rate_changes(調整/新建且已生效)
+    以 change 覆蓋 rate_data，回傳最新生效利率
+    """
+    from datetime import datetime
+    
+    # 今日日期 (YYYYMMDD)
+    today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    
+    # 1. 查詢基礎 rate_data
+    base_query = {}
+    if bank:
+        base_query["bank_name"] = {"$regex": bank, "$options": "i"}
+    if term_month:
+        term_map = {
+            1: "１月", 2: "２月", 3: "３月", 4: "４月",
+            5: "５月", 6: "６月", 7: "７月", 8: "８月",
+            9: "９月", 10: "１０月", 11: "１１月", 12: "１２月"
+        }
+        if term_month in term_map:
+            base_query["term_chinese"] = term_map[term_month]
+    if amount:
+        base_query["quota_chinese"] = {"$regex": amount, "$options": "i"}
+    if item_type:
+        base_query["rate_item_name"] = item_type
+    
+    base_rates = list(rate_coll.find(base_query, {"_id": 0}))
+    
+    # 2. 查詢已生效的異動 (調整/新建)
+    change_query = {
+        "change_type": {"$in": ["(調整)", "(新建)"]},
+        "effective_date": {"$lte": today_str}
+    }
+    if bank:
+        change_query["bank_name"] = {"$regex": bank, "$options": "i"}
+    if term_month:
+        term_map = {
+            1: "１月", 2: "２月", 3: "３月", 4: "４月",
+            5: "５月", 6: "６月", 7: "７月", 8: "８月",
+            9: "９月", 10: "１０月", 11: "１１月", 12: "１２月"
+        }
+        if term_month in term_map:
+            change_query["term"] = term_map[term_month]
+    if amount:
+        change_query["quota_chinese"] = {"$regex": amount, "$options": "i"}
+    if item_type:
+        change_query["rate_item_name"] = item_type
+    
+    changes = list(changes_coll.find(change_query, {"_id": 0}))
+    
+    # 3. 建立合併鍵 -> 以 change 覆蓋 base
+    # 鍵: bank_name + term_chinese + quota_chinese + rate_item_name
+    def make_key(doc):
+        return f"{doc.get('bank_name','')}|{doc.get('term_chinese', doc.get('term',''))}|{doc.get('quota_chinese','')}|{doc.get('rate_item_name','')}"
+    
+    merged = {}
+    for r in base_rates:
+        merged[make_key(r)] = r
+    
+    for c in changes:
+        # 將 change 欄位映射到 rate 格式
+        merged_rate = {
+            "data_date": c.get("data_date"),
+            "bank_code": c.get("bank_code"),
+            "bank_name": c.get("bank_name"),
+            "rate_item_code": c.get("rate_item_code"),
+            "rate_item_name": c.get("rate_item_name"),
+            "term_chinese": c.get("term"),  # bkrldc 使用 term
+            "quota_code": c.get("quota_code"),
+            "quota_chinese": c.get("quota_chinese"),
+            "effective_date": c.get("effective_date"),
+            "effective_time": c.get("effective_time"),
+            "fixed_rate": str(int(c.get("fixed_rate", 0) * 1000)).zfill(5) if c.get("fixed_rate") else "00000",
+            "floating_rate": str(int(c.get("floating_rate", 0) * 1000)).zfill(5) if c.get("floating_rate") else "00000",
+            "fetched_at": c.get("fetched_at"),
+            "fixed_rate_pct": c.get("fixed_rate"),
+            "floating_rate_pct": c.get("floating_rate"),
+            "_source": "merged_change",
+            "_change_type": c.get("change_type"),
+            "_change_id": c.get("change_id"),
+        }
+        merged[make_key(c)] = merged_rate
+    
+    # 4. 排序
+    results = list(merged.values())
+    sort_field = sort.lstrip("-")
+    sort_dir = -1 if sort.startswith("-") else 1
+    valid_sort_fields = ["fixed_rate_pct", "floating_rate_pct", "data_date", "bank_name", "effective_date"]
+    if sort_field not in valid_sort_fields:
+        sort_field = "fixed_rate_pct"
+        sort_dir = -1
+    
+    results.sort(key=lambda x: (x.get(sort_field) or 0), reverse=(sort_dir == -1))
+    results = results[:limit]
+    
+    return {
+        "data": results,
+        "total": len(merged),
+        "returned": len(results),
+        "query": {
+            "bank": bank,
+            "term_month": term_month,
+            "amount": amount,
+            "item_type": item_type,
+            "limit": limit,
+            "sort": sort
+        }
     }
 
 

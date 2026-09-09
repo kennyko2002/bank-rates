@@ -775,10 +775,10 @@
             statsData = await apiGet('/rates/stats');
             console.log('Stats loaded:', statsData);
 
-            // Load rates data
-            const ratesResult = await apiGet('/rates?limit=2000');
+            // Load merged rates data (rate_data + rate_changes)
+            const ratesResult = await apiGet('/rates/merged?limit=2000');
             allData = ratesResult.data;
-            console.log('Rates loaded:', allData.length, 'records');
+            console.log('Merged rates loaded:', allData.length, 'records');
 
             // Load latest update info
             const latestUpdate = await apiGet('/latest-update');
