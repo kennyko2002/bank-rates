@@ -776,7 +776,7 @@
             console.log('Stats loaded:', statsData);
 
             // Load merged rates data (rate_data + rate_changes)
-            const ratesResult = await apiGet('/rates/merged?limit=2000');
+            const ratesResult = await apiGet('/rates/merged?limit=5000');
             allData = ratesResult.data;
             console.log('Merged rates loaded:', allData.length, 'records');
 
@@ -1007,55 +1007,40 @@
 
     function parseAmountToWan(amountStr) {
         if (!amountStr || amountStr === '一般') return 0;
-        
-        let amountWan = 0;
+
         const str = amountStr.trim();
-        
-        // Handle "一般" or non-numeric
         if (!/[0-9０-９]/.test(str)) return 0;
-        
+
         // Convert full-width to half-width
         const halfStr = str.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
-        
-        // Extract all units and their values
-        // Order matters: 億 > 仟萬/千萬 > 佰萬/百萬 > 萬
-        let remaining = halfStr;
+
         let totalWan = 0;
-        
+        let remaining = halfStr;
+
         // 億 (1億 = 10000萬)
         const yiMatch = remaining.match(/([0-9.]+)億/);
         if (yiMatch) {
             totalWan += parseFloat(yiMatch[1]) * 10000;
             remaining = remaining.replace(yiMatch[0], '');
         }
-        
-        // 仟萬/千萬 (1仟萬 = 1000萬)
-        const qianMatch = remaining.match(/([0-9.]+)[仟千]萬/);
-        if (qianMatch) {
-            totalWan += parseFloat(qianMatch[1]) * 1000;
-            remaining = remaining.replace(qianMatch[0], '');
+
+        // 萬以前的部分：X仟Y佰Z → X*1000 + Y*100 + Z（單位是萬）
+        const wanIdx = remaining.indexOf('萬');
+        if (wanIdx >= 0) {
+            const head = remaining.slice(0, wanIdx); // 例如 "1仟1佰" 或 "5佰" 或 "2500"
+            // 依序抓「數字+仟/佰/拾」或純數字
+            const unitRe = /([0-9.]+)([仟佰拾])?/g;
+            let m;
+            while ((m = unitRe.exec(head)) !== null) {
+                const val = parseFloat(m[1]);
+                const unit = m[2];
+                if (unit === '仟') totalWan += val * 1000;
+                else if (unit === '佰') totalWan += val * 100;
+                else if (unit === '拾') totalWan += val * 10;
+                else totalWan += val; // 無單位，直接是萬數
+            }
         }
-        
-        // 佰萬/百萬 (1佰萬 = 100萬)
-        const baiMatch = remaining.match(/([0-9.]+)[佰百]萬/);
-        if (baiMatch) {
-            totalWan += parseFloat(baiMatch[1]) * 100;
-            remaining = remaining.replace(baiMatch[0], '');
-        }
-        
-        // 萬 (單純的萬)
-        const wanMatch = remaining.match(/([0-9.]+)萬/);
-        if (wanMatch) {
-            totalWan += parseFloat(wanMatch[1]);
-            remaining = remaining.replace(wanMatch[0], '');
-        }
-        
-        // If still have remaining numbers without units, treat as wan
-        const numMatch = remaining.match(/([0-9.]+)/);
-        if (numMatch) {
-            totalWan += parseFloat(numMatch[1]);
-        }
-        
+
         return totalWan;
     }
 

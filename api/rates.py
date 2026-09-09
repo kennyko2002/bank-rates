@@ -212,7 +212,7 @@ async def get_rates_merged(
     term_month: Optional[int] = Query(None, description="存款月數 1-12"),
     amount: Optional[str] = Query(None, description="額度關鍵字"),
     item_type: Optional[str] = Query(None, description="利率項目"),
-    limit: int = Query(500, ge=1, le=2000, description="回傳筆數上限"),
+    limit: int = Query(2000, ge=1, le=5000, description="回傳筆數上限"),
     sort: str = Query("-fixed_rate_pct", description="排序欄位"),
 ):
     """
