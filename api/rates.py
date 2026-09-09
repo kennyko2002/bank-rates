@@ -259,16 +259,16 @@ async def get_rates_merged(
         if term_month in term_map:
             change_query["term"] = term_map[term_month]
     if amount:
-        change_query["quota_chinese"] = {"$regex": amount, "$options": "i"}
+        change_query["quota"] = {"$regex": amount, "$options": "i"}  # rate_changes 使用 quota
     if item_type:
-        change_query["rate_item_name"] = item_type
+        change_query["rate_name"] = item_type  # rate_changes 使用 rate_name
     
     changes = list(changes_coll.find(change_query, {"_id": 0}))
     
     # 3. 建立合併鍵 -> 以 change 覆蓋 base
     # 鍵: bank_name + term_chinese + quota_chinese + rate_item_name
     def make_key(doc):
-        return f"{doc.get('bank_name','')}|{doc.get('term_chinese', doc.get('term',''))}|{doc.get('quota_chinese','')}|{doc.get('rate_item_name','')}"
+        return f"{doc.get('bank_name','')}|{doc.get('term_chinese', doc.get('term',''))}|{doc.get('quota_chinese', doc.get('quota',''))}|{doc.get('rate_item_name', doc.get('rate_name',''))}"
     
     merged = {}
     for r in base_rates:
@@ -276,21 +276,25 @@ async def get_rates_merged(
     
     for c in changes:
         # 將 change 欄位映射到 rate 格式
+        # rate_changes 欄位: rate_name, term, quota, fixed_rate(float), floating_rate(float)
+        fixed_rate_val = c.get("fixed_rate")
+        floating_rate_val = c.get("floating_rate")
+        
         merged_rate = {
             "data_date": c.get("data_date"),
             "bank_code": c.get("bank_code"),
             "bank_name": c.get("bank_name"),
             "rate_item_code": c.get("rate_item_code"),
-            "rate_item_name": c.get("rate_item_name"),
-            "term_chinese": c.get("term"),  # bkrldc 使用 term
+            "rate_item_name": c.get("rate_name"),  # rate_changes 使用 rate_name
+            "term_chinese": c.get("term"),  # rate_changes 使用 term
             "quota_code": c.get("quota_code"),
-            "quota_chinese": c.get("quota_chinese"),
+            "quota_chinese": c.get("quota"),  # rate_changes 使用 quota
             "effective_date": c.get("effective_date"),
             "effective_time": c.get("effective_time"),
-            "fixed_rate": str(int(c.get("fixed_rate", 0) * 1000)).zfill(5) if c.get("fixed_rate") else "00000",
-            "floating_rate": str(int(c.get("floating_rate", 0) * 1000)).zfill(5) if c.get("floating_rate") else "00000",
+            "fixed_rate": str(int(fixed_rate_val * 1000)).zfill(5) if fixed_rate_val is not None else "00000",
+            "floating_rate": str(int(c.get("floating_rate", 0) * 1000)).zfill(5) if c.get("floating_rate") is not None else "00000",
             "fetched_at": c.get("fetched_at"),
-            "fixed_rate_pct": c.get("fixed_rate"),
+            "fixed_rate_pct": fixed_rate_val,
             "floating_rate_pct": c.get("floating_rate"),
             "_source": "merged_change",
             "_change_type": c.get("change_type"),
